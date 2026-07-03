@@ -8,7 +8,6 @@ SEQ = "GCGCUUCGCCGC"
 def pf_with_up(e1, e2=None):
     fc = RNA.fold_compound(SEQ)
     fc.mfe()
-    fc.exp_params_rescale(0.01 * fc.mfe()[1])
     fc.sc_add_up(3, e1)
     if e2 is not None:
         fc.sc_add_up(3, e2)
@@ -18,7 +17,6 @@ def pf_with_up(e1, e2=None):
 def pf_with_bp(e1, e2=None):
     fc = RNA.fold_compound(SEQ)
     fc.mfe()
-    fc.exp_params_rescale(0.01 * fc.mfe()[1])
     fc.sc_add_bp(2, 11, e1)
     if e2 is not None:
         fc.sc_add_bp(2, 11, e2)
