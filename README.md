@@ -53,11 +53,27 @@ precision.
 
 ## Applying the patch
 
+Download the corresponding ViennaRNA release tarball from
+
+https://www.tbi.univie.ac.at/RNA/
+
+For example:
+
 ```bash
-git clone https://github.com/ViennaRNA/ViennaRNA.git
-cd ViennaRNA
-git checkout v2.7.2
-git apply patch-viennarna-2.7.2-1.patch
+wget https://www.tbi.univie.ac.at/RNA/download/sourcecode/2_7_x/ViennaRNA-2.7.2.tar.gz
+tar xzf ViennaRNA-2.7.2.tar.gz
+cd ViennaRNA-2.7.2
+
+patch -p1 < ../patch-viennarna-2.7.2-1.patch
+
+./configure \
+    --prefix=$HOME/viennarna \
+    --without-doc \
+    --without-doc-html \
+    --without-doc-pdf
+
+make -j$(nproc)
+make install
 ```
 
 ## Limitations
