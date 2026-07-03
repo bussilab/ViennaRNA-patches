@@ -1,0 +1,82 @@
+name: Test patch
+
+on:
+  push:
+  pull_request:
+
+env:
+  VRNA_VERSION: "2.7.2"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.14
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            autoconf \
+            automake \
+            libtool \
+            pkg-config \
+            swig \
+            gengetopt \
+            help2man \
+            doxygen \
+            python3-dev \
+            wget
+
+      - name: Compute ViennaRNA download URL
+        run: |
+          VRNA_SERIES=$(echo "${VRNA_VERSION}" | awk -F. '{print $1 "_" $2 "_x"}')
+          echo "VRNA_SERIES=${VRNA_SERIES}" >> $GITHUB_ENV
+
+      - name: Download ViennaRNA
+        run: |
+          wget https://www.tbi.univie.ac.at/RNA/download/sourcecode/${VRNA_SERIES}/ViennaRNA-${VRNA_VERSION}.tar.gz
+          tar xzf ViennaRNA-${VRNA_VERSION}.tar.gz
+
+      - name: Apply patch
+        run: |
+          cd ViennaRNA-${VRNA_VERSION}
+          patch -p1 < ../patch-viennarna-${VRNA_VERSION}-1.patch
+
+      - name: Configure
+        run: |
+          cd ViennaRNA-${VRNA_VERSION}
+          ./configure \
+            --prefix=$HOME/vrna \
+            --without-doc \
+            --without-doc-html \
+            --without-doc-pdf
+
+      - name: Build
+        run: |
+          cd ViennaRNA-${VRNA_VERSION}
+          make -j2
+
+      - name: Install
+        run: |
+          cd ViennaRNA-${VRNA_VERSION}
+          make install
+
+      - name: Configure PYTHONPATH
+        run: |
+          PY_SITE=$(find "$HOME/vrna" -type d -name site-packages | head -n1)
+          echo "PYTHONPATH=${PY_SITE}" >> $GITHUB_ENV
+
+      - name: Check ViennaRNA import
+        run: |
+          python -c "import RNA; print(RNA.fold_compound('GCGC').mfe())"
+
+      - name: Run tests
+        run: |
+          python -m unittest discover -s tests -v
