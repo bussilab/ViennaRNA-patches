@@ -48,6 +48,7 @@ jobs:
         run: |
           cd ViennaRNA-${VRNA_VERSION}
           patch -p1 < ../patch-viennarna-${VRNA_VERSION}-1.patch
+          patch -p1 < ../patch-viennarna-${VRNA_VERSION}-2.patch
 
       - name: Configure
         run: |
