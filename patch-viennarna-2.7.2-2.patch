@@ -1,5 +1,5 @@
 diff --git a/src/ViennaRNA/subopt/subopt.c b/src/ViennaRNA/subopt/subopt.c
-index 87f4d13a..84926eca 100644
+index 87f4d13a..6a6e785e 100644
 --- a/src/ViennaRNA/subopt/subopt.c
 +++ b/src/ViennaRNA/subopt/subopt.c
 @@ -516,9 +516,9 @@ vrna_subopt_cb(vrna_fold_compound_t *fc,
@@ -14,17 +14,29 @@ index 87f4d13a..84926eca 100644
    char                *struc, *structure;
    float               correction;
    vrna_param_t        *P;
-@@ -582,6 +582,13 @@ vrna_subopt_cb(vrna_fold_compound_t *fc,
+@@ -582,6 +582,25 @@ vrna_subopt_cb(vrna_fold_compound_t *fc,
      vrna_log_warning("Energy range too high, limiting to reasonable value");
      threshold = INF - EMAX;
    }
-+  energy_limit = (double)threshold / 100.;
-+
 +  recalculate_final_energy = (logML ||
 +                              (dangle_model == 1) ||
 +                              (dangle_model == 3) ||
 +                              (fc->sc) ||
 +                              (fc->scs));
+
++  energy_limit = (double)threshold / 100.;
+
++  /*
++   * The energies used while traversing the backtracking tree are integer
++   * centi-kcal/mol values.  Soft constraints, however, may be stored with
++   * fractional precision and are rounded when the MFE arrays are populated.
++   * Consequently, a structure whose re-evaluated energy is exactly on the
++   * requested boundary can be pruned one centi-kcal/mol too early.  Leave one
++   * integer unit of slack for the traversal; the final, re-evaluated energy is
++   * still checked against energy_limit below.
++   */
++  if (recalculate_final_energy)
++    threshold++;
  
    /* init env data structure */
    env             = (subopt_env *)vrna_alloc(sizeof(subopt_env));

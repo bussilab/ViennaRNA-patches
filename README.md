@@ -59,6 +59,8 @@ precision.
   - completed structures are re-evaluated when soft constraints are present;
   - final output is filtered by the evaluated energy, so structures outside the
     requested energy band are not returned;
+  - one centi-kcal/mol of traversal slack prevents structures exactly on the
+    requested boundary from being pruned before re-evaluation;
   - duplicate structures caused by this soft-constraint backtracking issue are
     avoided.
 
