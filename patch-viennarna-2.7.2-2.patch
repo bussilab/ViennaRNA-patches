@@ -1,0 +1,52 @@
+diff --git a/src/ViennaRNA/subopt/subopt.c b/src/ViennaRNA/subopt/subopt.c
+index 87f4d13a..5039099e 100644
+--- a/src/ViennaRNA/subopt/subopt.c
++++ b/src/ViennaRNA/subopt/subopt.c
+@@ -1280,10 +1280,7 @@ scan_interval(vrna_fold_compound_t  *fc,
+       return;
+   }
+ 
+-  if (env->nopush) {
+-    push_back(env->Stack, state);
+-    env->nopush = false;
+-  }
++  /* discard states for which no valid decomposition was found */
+ }
+ 
+ 
+@@ -1306,6 +1303,7 @@ scan_mb(vrna_fold_compound_t  *fc,
+   vrna_hc_t                 *hc;
+   struct sc_mb_dat          *sc_dat;
+   sc_mb_red_cb              sc_red_stem;
++  sc_mb_red_cb              sc_red_ml;
+   sc_mb_red_cb              sc_decomp_ml;
+   vrna_smx_csr(int)         *c_gq;
+ 
+@@ -1329,6 +1327,7 @@ scan_mb(vrna_fold_compound_t  *fc,
+   hc            = fc->hc;
+   sc_dat        = &(constraints_dat->sc_dat_mb);
+   sc_red_stem   = constraints_dat->sc_dat_mb.red_stem;
++  sc_red_ml     = constraints_dat->sc_dat_mb.red_ml;
+   sc_decomp_ml  = constraints_dat->sc_dat_mb.decomp_ml;
+ 
+   best_energy = best_attainable_energy(fc, state);  /* .. on remaining intervals */
+@@ -1440,6 +1439,9 @@ scan_mb(vrna_fold_compound_t  *fc,
+           (sn[i] == sn[j])) {
+         element_energy = vrna_E_multibranch_stem(0, -1, -1, P) + P->MLbase * up;
+ 
++        if (sc_red_ml)
++          element_energy += sc_red_ml(i, j, k + 1, j, sc_dat);
++
+         if (sc_red_stem)
+           element_energy += sc_red_stem(i, j, k + 1, j, sc_dat);
+ 
+@@ -1476,6 +1478,9 @@ scan_mb(vrna_fold_compound_t  *fc,
+ 
+         element_energy += P->MLbase * up;
+ 
++        if (sc_red_ml)
++          element_energy += sc_red_ml(i, j, k + 1, j, sc_dat);
++
+         if (sc_red_stem)
+           element_energy += sc_red_stem(i, j, k + 1, j, sc_dat);
+ 

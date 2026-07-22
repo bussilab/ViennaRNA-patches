@@ -3,16 +3,21 @@
 This repository contains patches for specific ViennaRNA releases.
 Patches are not officially supported and are maintained by our group.
 
-Each patch is designed to be applied to the corresponding upstream release and
-contains all modifications introduced up to that patch version.
+Each patch is independent and applies directly to the corresponding upstream
+release. By default, patches are applied in numerical order, but either patch
+may also be applied alone.
 
-## Patch
+## Patches
 
 **Base version:** ViennaRNA 2.7.2
 
-**Patch:** `patch-viennarna-2.7.2-1`
+- `patch-viennarna-2.7.2-1.patch`: continuous soft-constraint values
+- `patch-viennarna-2.7.2-2.patch`: correct `subopt()` backtracking with
+  unpaired soft constraints
 
 ## Summary
+
+### Patch 1
 
 This patch removes the discretization of soft constraints in partition function
 calculations while preserving the original integer arithmetic for MFE
@@ -46,10 +51,23 @@ Therefore, MFE predictions remain fully compatible with the original ViennaRNA
 implementation, while PF calculations gain substantially improved numerical
 precision.
 
+### Patch 2
+
+This patch fixes suboptimal-structure backtracking when unpaired soft
+constraints contribute to multiloop decompositions. Without the correction,
+`subopt()` can omit valid structures, return structures outside the requested
+energy band, or produce duplicate structures.
+
 ## Files modified
+
+Patch 1:
 
 - `src/ViennaRNA/constraints/soft.c`
 - `src/ViennaRNA/constraints/soft.h`
+
+Patch 2:
+
+- `src/ViennaRNA/subopt/subopt.c`
 
 ## Applying the patch
 
@@ -65,6 +83,7 @@ tar xzf ViennaRNA-2.7.2.tar.gz
 cd ViennaRNA-2.7.2
 
 patch -p1 < ../patch-viennarna-2.7.2-1.patch
+patch -p1 < ../patch-viennarna-2.7.2-2.patch
 
 ./configure \
     --prefix=$HOME/viennarna \
@@ -76,9 +95,12 @@ make -j$(nproc)
 make install
 ```
 
+To use only one fix, apply only its corresponding patch command. Neither patch
+depends on the other.
+
 ## Limitations
 
-This patch affects only soft constraints handled through
+Patch 1 affects only soft constraints handled through
 
 - `vrna_sc_add_up()`
 - `vrna_sc_set_up()`
@@ -90,5 +112,6 @@ This patch affects only soft constraints handled through
 Stack soft constraints (`vrna_sc_add_stack()` / `vrna_sc_set_stack()`) still use
 the original integer discretization.
 
-Suboptimal structure enumeration (`subopt`) still uses the rounded MFE energies,
-as in the original ViennaRNA implementation.
+Suboptimal structure enumeration (`subopt`) still reports rounded MFE energies,
+as in the original ViennaRNA implementation. Patch 2 corrects which structures
+are reached during backtracking; it does not change that reporting convention.
