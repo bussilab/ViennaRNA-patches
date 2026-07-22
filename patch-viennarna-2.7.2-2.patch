@@ -23,9 +23,9 @@ index 87f4d13a..6a6e785e 100644
 +                              (dangle_model == 3) ||
 +                              (fc->sc) ||
 +                              (fc->scs));
-
++
 +  energy_limit = (double)threshold / 100.;
-
++
 +  /*
 +   * The energies used while traversing the backtracking tree are integer
 +   * centi-kcal/mol values.  Soft constraints, however, may be stored with
