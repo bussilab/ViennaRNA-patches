@@ -69,46 +69,5 @@ class TestContinuousSoftConstraints(unittest.TestCase):
         self.assertAlmostEqual(pf_split, pf_once, places=5)
         self.assertNotAlmostEqual(pf_split, pf_zero, places=5)
 
-    def test_comparative_base_pair_constraints(self):
-        alignment = [SEQ, SEQ]
-
-        def energies(contributions):
-            fc = RNA.fold_compound(alignment)
-
-            if contributions:
-                # Exercise comparative initialization on a fresh fold compound.
-                self.assertEqual(
-                    fc.sc_add_bp_comparative(
-                        [2, 2], [8, 8], [contributions[0], contributions[0]],
-                    ),
-                    2,
-                )
-
-            fc.mfe()
-            fc.pf()
-
-            for value in contributions[1:]:
-                self.assertEqual(
-                    fc.sc_add_bp_comparative(
-                        [2, 2], [8, 8], [value, value],
-                        RNA.OPTION_MFE | RNA.OPTION_PF,
-                    ),
-                    2,
-                )
-            structure = "(((...)))..."
-            mfe = fc.eval_structure(structure)
-            pf = fc.pf()[1]
-            return mfe, pf
-
-        mfe_zero, pf_zero = energies([])
-        mfe_split, pf_split = energies([0.003, 0.003])
-        mfe_once, pf_once = energies([0.006])
-
-        self.assertAlmostEqual(mfe_split - mfe_zero, 0.01, places=5)
-        self.assertAlmostEqual(mfe_split, mfe_once, places=5)
-        self.assertAlmostEqual(pf_split, pf_once, places=5)
-        self.assertNotAlmostEqual(pf_split, pf_zero, places=5)
-
-
 if __name__ == "__main__":
     unittest.main()

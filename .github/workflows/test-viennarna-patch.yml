@@ -60,11 +60,6 @@ jobs:
             --without-doc-html \
             --without-doc-pdf
 
-      - name: Regenerate Python SWIG wrapper
-        run: |
-          cd ViennaRNA-${VRNA_VERSION}/interfaces/Python
-          rm -f RNA_wrap.cpp RNA.py RNA/RNA.py
-
       - name: Build
         run: |
           cd ViennaRNA-${VRNA_VERSION}

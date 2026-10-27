@@ -56,11 +56,10 @@ The consequences are:
 Thus, PF calculations retain the supplied precision, while MFE calculations
 round the accumulated contributions to the existing integer energy scale.
 
-**If you use patch 1, apply patch 3 as well.** Patch 1 alone leaves the
-comparative base-pair add path rounded to 0.01 kcal/mol. On a fresh comparative
-fold compound, that path can also crash because it checks the wrong constraint
-pointer during initialization. Its MFE dimer wrapper truncates stored
-fractional base-pair energies. These issues are addressed in patch 3.
+Patch 3 addresses the `--enable-floatpf` storage type mismatch and a separate
+loss of fractional base-pair contributions in the MFE dimer wrapper. The
+comparative base-pair add path remains rounded to 0.01 kcal/mol; its
+initialization and precision issues are outside this patch.
 
 ### Patch 2
 
@@ -75,36 +74,17 @@ Patch 2 remains useful for the 2.7.2 release, which does not contain that fix.
 
 ### Patch 3
 
-This source-only follow-up makes the raw storage type consistently `double`,
-including builds configured with `--enable-floatpf`. It retains fractional
-base-pair contributions in comparative folding, initializes comparative
-constraints correctly, and preserves fractional pair contributions when the
-MFE dimer wrapper copies constraints to a second fold compound. The patch also
-exposes the comparative base-pair add function to the Python bindings so its
-behavior can be tested there. Regression tests live in this repository's
-`tests/` directory and run in its GitHub Actions workflow using the Python
-bindings.
+This source-only follow-up makes the raw soft-constraint storage type
+consistently `double`, including builds configured with `--enable-floatpf`,
+and preserves fractional pair contributions when the MFE dimer wrapper copies
+constraints to a second fold compound. It does not change how comparative
+folding adds base-pair constraints: those contributions continue to be rounded
+to 0.01 kcal/mol. Regression tests live in this repository's `tests/`
+directory and run in its GitHub Actions workflow using the Python bindings.
 
 Patch 3 changes the public base-pair storage layout in `--enable-floatpf`
 builds. Rebuild ViennaRNA and any compiled bindings or extensions together
 when upgrading an installation that uses patch 1.
-
-The `sc_add_bp_comparative()` Python method is a small SWIG wrapper added to
-exercise the comparative base-pair path in the regression tests. It exposes
-the existing C function to Python; the tests in this repository use it to
-check comparative initialization and repeated fractional contributions. If
-the release archive's generated Python wrapper is stale, remove its generated
-files after applying the patches and configuring ViennaRNA:
-
-```bash
-rm -f interfaces/Python/RNA_wrap.cpp \
-      interfaces/Python/RNA.py \
-      interfaces/Python/RNA/RNA.py
-```
-
-Then run the regular `make` and `make install` commands from the ViennaRNA
-source directory. The build regenerates these files and compiles the Python
-extension with the wrapper.
 
 ## Files modified
 
@@ -122,7 +102,6 @@ Patch 3:
 - `src/ViennaRNA/constraints/soft.c`
 - `src/ViennaRNA/constraints/soft.h`
 - `src/ViennaRNA/mfe/mfe_wrappers.c`
-- `interfaces/constraints_soft.i`
 
 Regression tests are maintained separately in `tests/` in this repository.
 
