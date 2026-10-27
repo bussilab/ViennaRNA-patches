@@ -1,0 +1,237 @@
+diff --git a/src/ViennaRNA/constraints/soft.c b/src/ViennaRNA/constraints/soft.c
+index c89bcc9..d24ab73 100644
+--- a/src/ViennaRNA/constraints/soft.c
++++ b/src/ViennaRNA/constraints/soft.c
+@@ -176,10 +176,10 @@ sc_store_bp(vrna_sc_bp_storage_t  **container,
+             unsigned int          i,
+             unsigned int          start,
+             unsigned int          end,
+-            FLT_OR_DBL            e);
++            double                e);
+ 
+ 
+-PRIVATE INLINE FLT_OR_DBL
++PRIVATE INLINE double
+ get_stored_bp_contributions(vrna_sc_bp_storage_t  *container,
+                             unsigned int          j);
+ 
+@@ -1344,9 +1344,10 @@ PRIVATE INLINE void
+ sc_init_up_storage(vrna_sc_t *sc)
+ {
+   if (!sc->up_storage)
+-    sc->up_storage = (double *)vrna_alloc(sizeof(double) * (sc->n + 2));
++    sc->up_storage = (double *)vrna_alloc(sizeof(*sc->up_storage) * (sc->n + 2));
+ }
+ 
++
+ /* pupulate sc->energy_up array at position i from sc->up_storage data */
+ PRIVATE INLINE void
+ populate_sc_up_mfe(vrna_sc_t    *sc,
+@@ -1358,7 +1359,7 @@ populate_sc_up_mfe(vrna_sc_t    *sc,
+   sc->energy_up[i][0] = 0;
+   for (j = 1; j <= n; j++)
+     sc->energy_up[i][j] = sc->energy_up[i][j - 1] +
+-                          (int)roundf(sc->up_storage[i + j - 1]);
++                          (int)round(sc->up_storage[i + j - 1]);
+ }
+ 
+ 
+@@ -1374,7 +1375,7 @@ populate_sc_up_pf(vrna_sc_t     *sc,
+   sc->exp_energy_up[i][0] = 1.;
+ 
+   for (j = 1; j <= n; j++) {
+-    GT                      = (double)sc->up_storage[i + j - 1] * 10.; /* convert deka-cal/mol to cal/mol */
++    GT                      = sc->up_storage[i + j - 1] * 10.; /* convert deka-cal/mol to cal/mol */
+     sc->exp_energy_up[i][j] = sc->exp_energy_up[i][j - 1]
+                               * (FLT_OR_DBL)exp(-GT / kT);
+   }
+@@ -1402,7 +1403,7 @@ sc_store_bp(vrna_sc_bp_storage_t  **container,
+             unsigned int          i,
+             unsigned int          start,
+             unsigned int          end,
+-            FLT_OR_DBL            e)
++            double                e)
+ {
+   unsigned int size, cnt = 0;
+ 
+@@ -1434,12 +1435,12 @@ sc_store_bp(vrna_sc_bp_storage_t  **container,
+ }
+ 
+ 
+-PRIVATE INLINE FLT_OR_DBL
++PRIVATE INLINE double
+ get_stored_bp_contributions(vrna_sc_bp_storage_t  *container,
+                             unsigned int          j)
+ {
+   unsigned int  cnt;
+-  FLT_OR_DBL e;
++  double        e;
+ 
+   e = 0.0;
+ 
+@@ -1467,7 +1468,7 @@ populate_sc_bp_mfe(vrna_sc_t    *sc,
+                    int          *idx)
+ {
+   unsigned int  j, k;
+-  FLT_OR_DBL       e;
++  double        e;
+ 
+   if (sc->bp_storage[i]) {
+     for (k = 1; k < maxdist; k++) {
+@@ -1480,11 +1481,11 @@ populate_sc_bp_mfe(vrna_sc_t    *sc,
+ 
+       switch (sc->type) {
+         case VRNA_SC_DEFAULT:
+-          sc->energy_bp[idx[j] + i] = (int)roundf(e);
++          sc->energy_bp[idx[j] + i] = (int)round(e);
+           break;
+ 
+         case VRNA_SC_WINDOW:
+-          sc->energy_bp_local[i][j - i] = (int)roundf(e);
++          sc->energy_bp_local[i][j - i] = (int)round(e);
+           break;
+       }
+     }
+@@ -1517,7 +1518,7 @@ populate_sc_bp_pf(vrna_sc_t     *sc,
+                   double        kT)
+ {
+   unsigned int      j, k;
+-  FLT_OR_DBL        e;
++  double            e;
+   FLT_OR_DBL        q;
+   double            GT;
+ 
+@@ -1596,16 +1597,16 @@ sc_add_bp_comparative(vrna_fold_compound_t  *fc,
+   vrna_sc_t     *sc;
+ 
+   ret = 0;
+-  if ((options & VRNA_OPTION_WINDOW) && (!fc->sc))
++  if ((options & VRNA_OPTION_WINDOW) && (!fc->scs))
+     vrna_sc_init_window(fc);
+-  else if (!fc->sc)
++  else if (!fc->scs)
+     vrna_sc_init(fc);
+ 
+   for (s = 0; s < fc->n_seq; s++) {
+     if (is[s] != 0) {
+       sc = fc->scs[s];
+       sc_init_bp_storage(sc);
+-      sc_store_bp(sc->bp_storage, is[s], js[s], js[s], (int)roundf(energies[s] * 100.));
++      sc_store_bp(sc->bp_storage, is[s], js[s], js[s], energies[s] * 100.);
+       sc->state |= STATE_DIRTY_BP_MFE | STATE_DIRTY_BP_PF;
+ 
+       ret++;
+diff --git a/src/ViennaRNA/constraints/soft.h b/src/ViennaRNA/constraints/soft.h
+index f4471b4..5628b66 100644
+--- a/src/ViennaRNA/constraints/soft.h
++++ b/src/ViennaRNA/constraints/soft.h
+@@ -221,7 +221,7 @@ typedef enum {
+ typedef struct {
+   unsigned int  interval_start;
+   unsigned int  interval_end;
+-  FLT_OR_DBL   	e;
++  double        e; /**< Energy contribution in units of 0.01 kcal/mol */
+ } vrna_sc_bp_storage_t;
+ 
+ 
+@@ -243,7 +243,7 @@ struct vrna_sc_s {
+   int                   **energy_up;      /**<  @brief Energy contribution for stretches of unpaired nucleotides */
+   FLT_OR_DBL            **exp_energy_up;  /**<  @brief Boltzmann Factors of the energy contributions for unpaired sequence stretches */
+ 
+-  FLT_OR_DBL            *up_storage;      /**<  @brief  Storage container for energy contributions per unpaired nucleotide */
++  double                *up_storage;      /**<  @brief  Storage container for energy contributions per unpaired nucleotide in units of 0.01 kcal/mol */
+   vrna_sc_bp_storage_t  **bp_storage;     /**<  @brief  Storage container for energy contributions per base pair */
+ 
+   int           *energy_stack;                    /**<  @brief Pseudo Energy contribution per base pair involved in a stack */
+@@ -485,6 +485,10 @@ vrna_sc_set_bp_comparative_seq(vrna_fold_compound_t *fc,
+ /**
+  *  @brief  Add soft constraints for paired nucleotides
+  *
++ *  Contributions to the same base pair accumulate at the supplied precision.
++ *  Partition function calculations use the accumulated value; MFE calculations
++ *  round it to the nearest 0.01 kcal/mol.
++ *
+  *  @see      vrna_sc_set_bp(), vrna_sc_set_up(), vrna_sc_add_up()
+  *
+  *  @param  fc          The #vrna_fold_compound_t the soft constraints are associated with
+@@ -663,6 +667,10 @@ vrna_sc_set_up_comparative_seq(vrna_fold_compound_t *fc,
+ /**
+  *  @brief  Add soft constraints for unpaired nucleotides
+  *
++ *  Contributions to the same nucleotide accumulate at the supplied precision.
++ *  Partition function calculations use the accumulated value; MFE calculations
++ *  round it to the nearest 0.01 kcal/mol.
++ *
+  *  @see      vrna_sc_set_up(), vrna_sc_add_bp(), vrna_sc_set_bp(),
+  *            vrna_sc_add_up_comparative()
+  *
+diff --git a/src/ViennaRNA/mfe/mfe_wrappers.c b/src/ViennaRNA/mfe/mfe_wrappers.c
+index 8efd145..29020c1 100644
+--- a/src/ViennaRNA/mfe/mfe_wrappers.c
++++ b/src/ViennaRNA/mfe/mfe_wrappers.c
+@@ -29,7 +29,7 @@
+ #endif
+ 
+ 
+-PRIVATE INLINE int
++PRIVATE INLINE double
+ get_stored_bp_contributions(vrna_sc_bp_storage_t  *container,
+                             unsigned int          j);
+ 
+@@ -239,7 +239,7 @@ vrna_mfe_dimer(vrna_fold_compound_t *vc,
+               if (j > l1 + l2)
+                 break;
+ 
+-              int e = get_stored_bp_contributions(vc->sc->bp_storage[i], j);
++              double e = get_stored_bp_contributions(vc->sc->bp_storage[i], j);
+ 
+               if (e != 0) {
+                 vrna_sc_add_bp(fc2, i - l1, j - l1, (FLT_OR_DBL)e / 100., VRNA_OPTION_DEFAULT);
+@@ -276,14 +276,14 @@ vrna_mfe_dimer(vrna_fold_compound_t *vc,
+ }
+ 
+ 
+-PRIVATE INLINE int
++PRIVATE INLINE double
+ get_stored_bp_contributions(vrna_sc_bp_storage_t  *container,
+                             unsigned int          j)
+ {
+   unsigned int  cnt;
+-  int           e;
++  double        e;
+ 
+-  e = 0;
++  e = 0.;
+ 
+   /* go through list of constraints for current position i */
+   for (cnt = 0; container[cnt].interval_start != 0; cnt++) {
+diff --git a/interfaces/constraints_soft.i b/interfaces/constraints_soft.i
+index b8a519a1..9db5eb8e 100644
+--- a/interfaces/constraints_soft.i
++++ b/interfaces/constraints_soft.i
+@@ -59,6 +59,25 @@
+     return vrna_sc_add_bp($self, i, j, energy, options);
+   }
+ 
++  int
++  sc_add_bp_comparative(std::vector<unsigned int>  i,
++                        std::vector<unsigned int>  j,
++                        std::vector<double>        energies,
++                        unsigned int               options = VRNA_OPTION_DEFAULT)
++  {
++    std::vector<FLT_OR_DBL>  e;
++
++    if (i.empty() || (i.size() != j.size()) || (i.size() != energies.size()))
++      return 0;
++
++    transform(energies.begin(), energies.end(), std::back_inserter(e), convert_vecdbl2vecFLR_OR_DBL);
++    return vrna_sc_add_bp_comparative($self,
++                                      (unsigned int *)&i[0],
++                                      (unsigned int *)&j[0],
++                                      (const FLT_OR_DBL *)&e[0],
++                                      options);
++  }
++
+   int
+   sc_add_bp(std::vector<std::vector<double> > constraints,
+             unsigned int                      options = VRNA_OPTION_DEFAULT)

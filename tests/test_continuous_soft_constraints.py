@@ -43,6 +43,72 @@ class TestContinuousSoftConstraints(unittest.TestCase):
 
         self.assertNotAlmostEqual(f_small, f_zero, places=10)
 
+    def test_mfe_rounds_accumulated_unpaired_contributions(self):
+        fc = RNA.fold_compound("AAAAAA")
+        fc.sc_add_up(3, 0.003)
+        fc.sc_add_up(3, 0.003)
+
+        self.assertAlmostEqual(fc.mfe()[1], 0.01, places=5)
+        self.assertAlmostEqual(fc.pf()[1], 0.006, places=5)
+
+    def test_mfe_rounds_accumulated_base_pair_contributions(self):
+        structure = "((((....))))"
+
+        def energies(contributions):
+            fc = RNA.fold_compound(SEQ)
+            for value in contributions:
+                fc.sc_add_bp(2, 11, value)
+            return fc.eval_structure(structure), fc.pf()[1]
+
+        mfe_zero, pf_zero = energies([])
+        mfe_split, pf_split = energies([0.003, 0.003])
+        mfe_once, pf_once = energies([0.006])
+
+        self.assertAlmostEqual(mfe_split - mfe_zero, 0.01, places=5)
+        self.assertAlmostEqual(mfe_split, mfe_once, places=5)
+        self.assertAlmostEqual(pf_split, pf_once, places=5)
+        self.assertNotAlmostEqual(pf_split, pf_zero, places=5)
+
+    def test_comparative_base_pair_constraints(self):
+        alignment = [SEQ, SEQ]
+
+        def energies(contributions):
+            fc = RNA.fold_compound(alignment)
+
+            if contributions:
+                # Exercise comparative initialization on a fresh fold compound.
+                self.assertEqual(
+                    fc.sc_add_bp_comparative(
+                        [2, 2], [8, 8], [contributions[0], contributions[0]],
+                    ),
+                    2,
+                )
+
+            fc.mfe()
+            fc.pf()
+
+            for value in contributions[1:]:
+                self.assertEqual(
+                    fc.sc_add_bp_comparative(
+                        [2, 2], [8, 8], [value, value],
+                        RNA.OPTION_MFE | RNA.OPTION_PF,
+                    ),
+                    2,
+                )
+            structure = "(((...)))..."
+            mfe = fc.eval_structure(structure)
+            pf = fc.pf()[1]
+            return mfe, pf
+
+        mfe_zero, pf_zero = energies([])
+        mfe_split, pf_split = energies([0.003, 0.003])
+        mfe_once, pf_once = energies([0.006])
+
+        self.assertAlmostEqual(mfe_split - mfe_zero, 0.01, places=5)
+        self.assertAlmostEqual(mfe_split, mfe_once, places=5)
+        self.assertAlmostEqual(pf_split, pf_once, places=5)
+        self.assertNotAlmostEqual(pf_split, pf_zero, places=5)
+
 
 if __name__ == "__main__":
     unittest.main()
