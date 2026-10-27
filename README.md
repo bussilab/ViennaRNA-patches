@@ -89,6 +89,23 @@ Patch 3 changes the public base-pair storage layout in `--enable-floatpf`
 builds. Rebuild ViennaRNA and any compiled bindings or extensions together
 when upgrading an installation that uses patch 1.
 
+The `sc_add_bp_comparative()` Python method is a small SWIG wrapper added to
+exercise the comparative base-pair path in the regression tests. It exposes
+the existing C function to Python; the tests in this repository use it to
+check comparative initialization and repeated fractional contributions. If
+the release archive's generated Python wrapper is stale, remove its generated
+files after applying the patches and configuring ViennaRNA:
+
+```bash
+rm -f interfaces/Python/RNA_wrap.cpp \
+      interfaces/Python/RNA.py \
+      interfaces/Python/RNA/RNA.py
+```
+
+Then run the regular `make` and `make install` commands from the ViennaRNA
+source directory. The build regenerates these files and compiles the Python
+extension with the wrapper.
+
 ## Files modified
 
 Patch 1:
